@@ -40,4 +40,11 @@ router.patch("/:id/toggle", authenticate, (req, res) =>
   toolsController.toggleActive(req, res)
 );
 
+// Delete tool
+router.delete(
+  "/:id",
+  authenticate,
+  (req, res) => toolsController.deleteTool(req, res)
+);
+
 export default router;
