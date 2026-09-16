@@ -37,4 +37,34 @@ export class AuthController {
       return res.status(401).json({ error: error.message });
     }
   }
+  async refresh(req: Request, res: Response) {
+    try {
+      const { refreshToken } = req.body;
+      if (!refreshToken) {
+        return res.status(400).json({ error: "Refresh token is required" });
+      }
+
+      const data = await authService.refreshToken(refreshToken);
+      return res
+        .status(200)
+        .json({ message: "Token refreshed successfully", ...data });
+    } catch (error: any) {
+      return res.status(401).json({ error: error.message });
+    }
+  }
+
+  async logout(req: Request, res: Response) {
+    try {
+      console.log("Logout request received:", req.body);
+      const { refreshToken } = req.body;
+      if (!refreshToken) {
+        return res.status(400).json({ error: "Refresh token is required" });
+      }
+
+      await authService.logout(refreshToken);
+      return res.status(200).json({ message: "Logout successful" });
+    } catch (error: any) {
+      return res.status(400).json({ error: error.message });
+    }
+  }
 }

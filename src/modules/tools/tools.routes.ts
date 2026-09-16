@@ -9,6 +9,9 @@ const toolsController = new ToolsController();
 // GET /api/v1/tools/search — Spatial search (no auth required)
 router.get("/search", (req, res) => toolsController.searchTools(req, res));
 
+// GET /api/v1/tools/nearby — Hyperlocal search (Haversine)
+router.get("/nearby", (req, res) => toolsController.getNearbyTools(req, res));
+
 // Authenticated routes
 // GET /api/v1/tools/my-listings — Owner's own tools
 router.get("/my-listings", authenticate, (req, res) =>

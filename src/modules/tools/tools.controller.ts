@@ -21,9 +21,17 @@ export class ToolsController {
         longitude,
       } = req.body;
 
-      if (!title || !price_per_day || !security_deposit || !address || latitude === undefined || longitude === undefined) {
+      if (
+        !title ||
+        !price_per_day ||
+        !security_deposit ||
+        !address ||
+        latitude === undefined ||
+        longitude === undefined
+      ) {
         return res.status(400).json({
-          error: "title, price_per_day, security_deposit, address, latitude, and longitude are required",
+          error:
+            "title, price_per_day, security_deposit, address, latitude, and longitude are required",
         });
       }
 
@@ -38,7 +46,9 @@ export class ToolsController {
         longitude,
       });
 
-      return res.status(201).json({ message: "Tool listed successfully", tool });
+      return res
+        .status(201)
+        .json({ message: "Tool listed successfully", tool });
     } catch (error: any) {
       return res.status(400).json({ error: error.message });
     }
@@ -55,7 +65,9 @@ export class ToolsController {
       const limit = parseInt(req.query.limit as string, 10) || 20;
 
       if (isNaN(lat) || isNaN(lng)) {
-        return res.status(400).json({ error: "lat and lng query parameters are required" });
+        return res
+          .status(400)
+          .json({ error: "lat and lng query parameters are required" });
       }
 
       const result = await toolsService.searchTools({
@@ -68,6 +80,51 @@ export class ToolsController {
       });
 
       return res.status(200).json(result);
+    } catch (error: any) {
+      return res.status(500).json({ error: error.message });
+    }
+  }
+
+  // GET /api/v1/tools/nearby — Hyperlocal search (Haversine)
+  async getNearbyTools(req: Request, res: Response) {
+    try {
+      const lat = parseFloat(req.query.lat as string);
+      const lng = parseFloat(req.query.lng as string);
+      const radius = parseFloat(req.query.radius as string) || 10; // Default 10 km
+      const category = req.query.category as string | undefined;
+      console.log("📍 NEARBY REQUEST:");
+      console.log("lat:", lat);
+      console.log("lng:", lng);
+      console.log("radius:", radius);
+      console.log("category:", category);
+      // Validation
+      if (isNaN(lat) || lat < -90 || lat > 90) {
+        return res
+          .status(400)
+          .json({ error: "Invalid lat: must be a number between -90 and 90" });
+      }
+      if (isNaN(lng) || lng < -180 || lng > 180) {
+        return res.status(400).json({
+          error: "Invalid lng: must be a number between -180 and 180",
+        });
+      }
+      if (isNaN(radius) || radius <= 0) {
+        return res
+          .status(400)
+          .json({ error: "Invalid radius: must be a positive number" });
+      }
+
+      const result = await toolsService.findNearbyTools(
+        lat,
+        lng,
+        radius,
+        category,
+      );
+      console.log("🔍 SERVICE RESULT:", result.tools);
+      console.log("🔍 TOOLS:", result.tools);
+      console.log("🔍 TOOLS LENGTH:", result.tools?.length);
+
+      return res.status(200).json({ result: result.tools });
     } catch (error: any) {
       return res.status(500).json({ error: error.message });
     }
@@ -92,7 +149,7 @@ export class ToolsController {
              WHERE tool_id = $1 AND borrower_id = $2
                AND status IN ('CONFIRMED', 'ESCROWED', 'ACTIVE_IN_USE')
              LIMIT 1`,
-            [req.params.id as string, req.user.userId]
+            [req.params.id as string, req.user.userId],
           );
           showExactAddress = resCheck.rows.length > 0;
         }
@@ -142,7 +199,7 @@ export class ToolsController {
       const tool = await toolsService.updateTool(
         req.params.id as string,
         req.user!.userId,
-        req.body
+        req.body,
       );
       return res.status(200).json({ message: "Tool updated", tool });
     } catch (error: any) {
@@ -160,7 +217,7 @@ export class ToolsController {
       const tool = await toolsService.toggleActive(
         req.params.id as string,
         req.user!.userId,
-        is_active
+        is_active,
       );
       return res.status(200).json({ message: "Tool status updated", tool });
     } catch (error: any) {

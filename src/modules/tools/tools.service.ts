@@ -95,6 +95,78 @@ export class ToolsService {
     };
   }
 
+  // ─── HYPERLOCAL RADIUS SEARCH (HAVERSINE) ────────────────────
+  async findNearbyTools(lat: number, lng: number, radiusKm: number, category?: string) {
+    const limit = 50; // Default limit
+    
+    let categoryFilter = "";
+    const params: any[] = [lat, lng, radiusKm, limit];
+
+    if (category) {
+      categoryFilter = "AND category = $5";
+      params.push(category);
+    }
+
+    // Haversine formula directly in PostgreSQL
+    // Returns distance_km. 6371 is the Earth's radius in km.
+    const query = `
+      SELECT
+        id, owner_id, title, description, category, price_per_day, security_deposit, is_active, created_at,
+        latitude, longitude,
+        (
+          6371 * acos(
+            cos(radians($1)) * cos(radians(latitude)) * cos(radians(longitude) - radians($2)) +
+            sin(radians($1)) * sin(radians(latitude))
+          )
+        ) AS distance_km
+      FROM tools
+      WHERE is_active = TRUE
+        ${categoryFilter}
+      HAVING (
+        6371 * acos(
+          cos(radians($1)) * cos(radians(latitude)) * cos(radians(longitude) - radians($2)) +
+          sin(radians($1)) * sin(radians(latitude))
+        )
+      ) <= $3
+      ORDER BY distance_km ASC
+      LIMIT $4
+    `;
+
+    // Note: PostgreSQL does not support HAVING without GROUP BY unless it's a grouped query.
+    // So we use a subquery or WHERE with the formula. Since WHERE can't use alias, we use a subquery.
+    const safeQuery = `
+      SELECT * FROM (
+        SELECT
+          id, owner_id, title, description, category, price_per_day, security_deposit, is_active, created_at,
+          ST_Y(location::geometry) AS latitude, 
+          ST_X(location::geometry) AS longitude,
+          (
+            6371 * acos(
+              LEAST(1.0, GREATEST(-1.0,
+                cos(radians($1)) * cos(radians(ST_Y(location::geometry))) * cos(radians(ST_X(location::geometry)) - radians($2)) +
+                sin(radians($1)) * sin(radians(ST_Y(location::geometry)))
+              ))
+            )
+          ) AS distance_km
+        FROM tools
+        WHERE is_active = TRUE
+          ${categoryFilter}
+      ) AS nearby_tools
+      WHERE distance_km <= $3
+      ORDER BY distance_km ASC
+      LIMIT $4
+    `;
+
+    const result = await pool.query(safeQuery, params);
+
+    return {
+      tools: result.rows.map((row: any) => ({
+        ...row,
+        distance_km: parseFloat(parseFloat(row.distance_km).toFixed(2)),
+      }))
+    };
+  }
+
   // ─── GET TOOL BY ID ────────────────────────────────────────
   // Returns full detail; exact address only shown to requesters
   // with a confirmed reservation (controller checks this).

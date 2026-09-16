@@ -33,10 +33,10 @@ export class AuthService {
     const role = dto.role || "BORROWER";
 
     const result = await pool.query(
-      `INSERT INTO users (name, email, phone_number, password_hash, role)
-       VALUES ($1, $2, $3, $4, $5)
-       RETURNING id, name, email, phone_number, role, created_at`,
-      [dto.name, dto.email, dto.phone_number || null, hashedPassword, role]
+      `INSERT INTO users (name, email, password_hash, role)
+       VALUES ($1, $2, $3, $4)
+       RETURNING id, name, email, role, created_at`,
+      [dto.name, dto.email, hashedPassword, role]
     );
 
     const user = result.rows[0];
