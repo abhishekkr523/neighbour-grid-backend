@@ -21,8 +21,18 @@ import { authenticate, AuthenticatedRequest } from "./middleware/authenticate";
 import "./workers/reservation-expiry.worker";
 import "./workers/escrow-settlement.worker";
 
+import http from "http";
+import { Server as SocketIOServer } from "socket.io";
+import chatRoutes from "./modules/chat/chat.routes";
+import { setupChatSockets } from "./modules/chat/chat.socket";
+
 const app = express();
 const PORT = process.env.PORT || 3000;
+const server = http.createServer(app);
+const io = new SocketIOServer(server, {
+  cors: { origin: "http://localhost:4200", credentials: true },
+});
+
 
 // ─── GLOBAL MIDDLEWARE ───────────────────────────────────────
 app.use(cors({ origin: "http://localhost:4200", credentials: true }));
@@ -46,6 +56,7 @@ app.use("/api/v1/reservations", reservationsRoutes);
 app.use("/api/v1/reservations", escrowRoutes);       // Mounts :id/hold, :id/settle under /reservations
 app.use("/api/v1/audits", auditsRoutes);
 app.use("/api/v1/disputes", disputesRoutes);
+app.use("/api/v1/chat", chatRoutes);
 
 // ─── AUDIT RETRIEVAL (nested under reservations) ─────────────
 // GET /api/v1/reservations/:id/audits
@@ -101,9 +112,13 @@ app.use((_req: Request, res: Response) => {
   res.status(404).json({ error: "Route not found" });
 });
 
+// ─── SOCKET.IO SETUP ─────────────────────────────────────────
+setupChatSockets(io);
+
 // ─── START SERVER ────────────────────────────────────────────
-app.listen(PORT, () => {
+server.listen(PORT, () => {
   console.log(`🚀 NeighborGrid Backend running on http://localhost:${PORT}`);
   console.log(`📡 API Base: http://localhost:${PORT}/api/v1`);
   console.log(`🔄 BullMQ Workers: reservation-expiry, escrow-settlement`);
+  console.log(`💬 WebSocket Server is running`);
 });

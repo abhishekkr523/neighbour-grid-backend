@@ -9,7 +9,12 @@ class ToolsController {
     async createTool(req, res) {
         try {
             const { title, description, category, price_per_day, security_deposit, address, latitude, longitude, } = req.body;
-            if (!title || !price_per_day || !security_deposit || !address || latitude === undefined || longitude === undefined) {
+            if (!title ||
+                !price_per_day ||
+                !security_deposit ||
+                !address ||
+                latitude === undefined ||
+                longitude === undefined) {
                 return res.status(400).json({
                     error: "title, price_per_day, security_deposit, address, latitude, and longitude are required",
                 });
@@ -24,7 +29,9 @@ class ToolsController {
                 latitude,
                 longitude,
             });
-            return res.status(201).json({ message: "Tool listed successfully", tool });
+            return res
+                .status(201)
+                .json({ message: "Tool listed successfully", tool });
         }
         catch (error) {
             return res.status(400).json({ error: error.message });
@@ -40,7 +47,9 @@ class ToolsController {
             const page = parseInt(req.query.page, 10) || 1;
             const limit = parseInt(req.query.limit, 10) || 20;
             if (isNaN(lat) || isNaN(lng)) {
-                return res.status(400).json({ error: "lat and lng query parameters are required" });
+                return res
+                    .status(400)
+                    .json({ error: "lat and lng query parameters are required" });
             }
             const result = await toolsService.searchTools({
                 lat,
@@ -63,18 +72,32 @@ class ToolsController {
             const lng = parseFloat(req.query.lng);
             const radius = parseFloat(req.query.radius) || 10; // Default 10 km
             const category = req.query.category;
+            console.log("📍 NEARBY REQUEST:");
+            console.log("lat:", lat);
+            console.log("lng:", lng);
+            console.log("radius:", radius);
+            console.log("category:", category);
             // Validation
             if (isNaN(lat) || lat < -90 || lat > 90) {
-                return res.status(400).json({ error: "Invalid lat: must be a number between -90 and 90" });
+                return res
+                    .status(400)
+                    .json({ error: "Invalid lat: must be a number between -90 and 90" });
             }
             if (isNaN(lng) || lng < -180 || lng > 180) {
-                return res.status(400).json({ error: "Invalid lng: must be a number between -180 and 180" });
+                return res.status(400).json({
+                    error: "Invalid lng: must be a number between -180 and 180",
+                });
             }
             if (isNaN(radius) || radius <= 0) {
-                return res.status(400).json({ error: "Invalid radius: must be a positive number" });
+                return res
+                    .status(400)
+                    .json({ error: "Invalid radius: must be a positive number" });
             }
             const result = await toolsService.findNearbyTools(lat, lng, radius, category);
-            return res.status(200).json({ tools: result });
+            console.log("🔍 SERVICE RESULT:", result.tools);
+            console.log("🔍 TOOLS:", result.tools);
+            console.log("🔍 TOOLS LENGTH:", result.tools?.length);
+            return res.status(200).json({ result: result.tools });
         }
         catch (error) {
             return res.status(500).json({ error: error.message });
